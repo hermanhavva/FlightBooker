@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-#include "Airplane.h"
+using namespace std;
 
 class TicketManager
 {
@@ -10,7 +10,7 @@ private:
 	private:
 		size_t seatAmount = 0;
 		size_t rowAmount = 0;
-		size_t seatInRowAmount = 0; 
+		size_t seatsInRowTotal = 0; 
 	};
 
 };

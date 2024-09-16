@@ -79,10 +79,10 @@ public:
 					ticketType->GetSeatInRowAmount() >= seat)
 				{	
 					shared_ptr<Ticket> newTicket = make_shared<Ticket>(date, flightNumber, passangerName, seat, rowNum, ticketType->GetPrice(), id);
-					if (!ticketsBought.contains(newTicket))  //  WILL NOT WORK BECAUSE THE POINTERS ARE DIFFERENT
+					if (!ticketsBought.contains(*(newTicket.get()))) 
 					{
-						ticketsBought.insert(move(newTicket));
-						idToTicketMap[idCount] = newTicket;
+						ticketsBought.insert(*(newTicket.get()));
+						idToTicketMap[idCount] = move(newTicket);
 						
 						if (!passangerToTicketsMap.contains(passangerName))  // if not present -> create a vector
 						{
@@ -120,9 +120,9 @@ public:
 			
 		auto ticket = idToTicketMap[id];  // copy in order not to be dependent on a (possibly) erased objet
 			
-		if (ticketsBought.find(ticket) != ticketsBought.end())
+		if (ticketsBought.contains(*(ticket.get())))
 		{
-			ticketsBought.erase(ticket);  // erase from set of all tickets
+			ticketsBought.erase(*(ticket.get()));  // erase from set of all tickets
 			idToTicketMap.erase(id);  // erase from id map 
 
 			auto& flightsOfPassangerVector = passangerToTicketsMap[ticket->GetPasssengerName()];  
@@ -353,8 +353,6 @@ private:
 		Ticket(const chrono::year_month_day& date,
 			const string& flightNumber,   // default constructor
 			const string& passangerName,
-	
-			//const BookingStatusEnum& status,
 			const SeatInRowEnum& seatEnum,
 			const size_t& rowNum,
 			const unsigned int& price,
@@ -362,6 +360,7 @@ private:
 			: flightNumber(flightNumber),
 			passangerName(passangerName),
 			date(date),
+			price(price),
 			//status(status),
 			seatPos(new SeatPosition(seatEnum, rowNum)),
 			id(id) {}
@@ -383,7 +382,7 @@ private:
 		{
 			return *(this->seatPos);
 		}
-		string GetFlightNum()
+		string GetFlightNum() const
 		{
 			return this->flightNumber;
 		}
@@ -401,7 +400,7 @@ private:
 			return this->groupKey;
 		}
 
-		bool operator == (const Ticket& other)
+		bool operator == (const Ticket& other) const
 		{
 			return this->flightNumber == other.flightNumber &&
 				this->passangerName == other.passangerName &&
@@ -427,7 +426,21 @@ private:
 
 	};
 
-	unordered_set<shared_ptr<Ticket>> ticketsBought;  // CNANGE TO JUST OBJECTS(NOT POINTERS)
+	struct TicketHasher 
+	{
+		size_t operator()(const Ticket& ticket) const
+		{
+
+			return ((hash<string>()(ticket.GetFlightNum()) ^
+					(hash<string>()(ticket.GetPasssengerName()) << 1)) >> 1) ^
+					(hash<int>()(int(ticket.GetDate().year())) << 1) ^
+					(hash<unsigned>()(unsigned(ticket.GetDate().month())) << 1) ^
+					(hash<unsigned>()(unsigned(ticket.GetDate().day())) << 1) ^
+					(hash<size_t>()(ticket.GetSeat().GetRowNumber()) << 1) ^
+					(hash<int>()(ticket.GetSeat().GetSeatInRow()));
+		}
+	};
+	unordered_set<Ticket, TicketHasher> ticketsBought;  // CNANGE TO JUST OBJECTS(NOT POINTERS)
 	unordered_map<unsigned int, shared_ptr<Ticket>> idToTicketMap;
 	unordered_map<string, vector<shared_ptr<Ticket>>> passangerToTicketsMap;
 	unordered_map<string, vector<shared_ptr<Ticket>>> groupKeyToTicketsMap;

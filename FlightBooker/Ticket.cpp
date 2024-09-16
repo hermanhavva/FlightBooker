@@ -1,3 +1,4 @@
+#pragma once
 #include <string>
 #include <unordered_map>
 #include <chrono>
@@ -82,7 +83,7 @@ public:
 					if (!ticketsBought.contains(*(newTicket.get()))) 
 					{
 						ticketsBought.insert(*(newTicket.get()));
-						idToTicketMap[idCount] = move(newTicket);
+						idToTicketMap[idCount] = newTicket;
 						
 						if (!passangerToTicketsMap.contains(passangerName))  // if not present -> create a vector
 						{

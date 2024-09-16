@@ -1,3 +1,4 @@
+#pragma once
 #include <windows.h>
 #include <string>
 #include <vector>
@@ -30,12 +31,13 @@ public:
 	vector<unique_ptr<FlightConfig>> GetFlightsConfig()  // get all the configs
 	{
 		unique_ptr<char[]> buffer(new char[CHUNK_SIZE]);
-		DWORD bytesRead;
+		DWORD bytsRead;
 		string line;
 		vector<unique_ptr<FlightConfig>> result;
 
-		while (ReadFile(fileHandle, buffer.get(), CHUNK_SIZE, &bytesRead, NULL) && bytesRead > 0) {
-			for (DWORD index = 0; index < bytesRead; ++index) {
+		while (ReadFile(fileHandle, buffer.get(), CHUNK_SIZE, &bytsRead, NULL) && bytsRead > 0) {
+			for (DWORD index = 0; index < bytsRead; ++index) 
+			{
 				char ch = buffer[index];
 				
 				if (ch == '\n') 
@@ -45,7 +47,7 @@ public:
 					stringstream lineStream(line);  // rurning string into a stream to parse it easily
 					string dateStr, token, priceStr;
 
-					pair <string, int> rowsToPrice;
+					
 					unique_ptr<FlightConfig> currentConfig = make_unique<FlightConfig>();
 					
 					lineStream >> chrono::parse("%d.%m.%Y", currentConfig->date)  // if not work, try with tm struct
@@ -54,15 +56,16 @@ public:
 					
 					while (lineStream >> token)
 					{
-						rowsToPrice.first = token;  // get rows range
+						pair <string, int> rowsToPrice;  // c26800 warning
+						rowsToPrice.first = token;  // get rows range  
 						lineStream >> priceStr;
 						rowsToPrice.second = stoi(priceStr.substr(0, priceStr.size() - 1));  // get rid of $ 
-						currentConfig->rowsNumsToPrice.push_back(move(rowsToPrice));  
+						currentConfig->rowsNumsToPrice.push_back(rowsToPrice);  
 					}
 					result.push_back(move(currentConfig));  
 
-					if (!line.empty()) {
-						
+					if (!line.empty()) 
+					{	
 						line.clear();  // Clear the line buffer
 					}
 				}
@@ -83,7 +86,5 @@ private:
 	int const CHUNK_SIZE = 1024;
 	//const int TOTAL_RECORDS;
 	FlightConfig lineStruct;
-
-
 
 };

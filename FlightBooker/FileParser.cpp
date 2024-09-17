@@ -31,12 +31,12 @@ public:
 	vector<unique_ptr<FlightConfig>> GetFlightsConfig()  // get all the configs
 	{
 		unique_ptr<char[]> buffer(new char[CHUNK_SIZE]);
-		DWORD bytsRead;
+		DWORD bytesRead;
 		string line;
 		vector<unique_ptr<FlightConfig>> result;
 
-		while (ReadFile(fileHandle, buffer.get(), CHUNK_SIZE, &bytsRead, NULL) && bytsRead > 0) {
-			for (DWORD index = 0; index < bytsRead; ++index) 
+		while (ReadFile(fileHandle, buffer.get(), CHUNK_SIZE, &bytesRead, NULL) && bytesRead > 0) {
+			for (DWORD index = 0; index < bytesRead; ++index) 
 			{
 				char ch = buffer[index];
 				
@@ -60,7 +60,7 @@ public:
 						rowsToPrice.first = token;  // get rows range  
 						lineStream >> priceStr;
 						rowsToPrice.second = stoi(priceStr.substr(0, priceStr.size() - 1));  // get rid of $ 
-						currentConfig->rowsNumsToPrice.push_back(rowsToPrice);  
+						currentConfig->rowsNumsToPrice.push_back(move(rowsToPrice));  
 					}
 					result.push_back(move(currentConfig));  
 
@@ -84,7 +84,5 @@ private:
 	wstring fileName;
 	HANDLE fileHandle;
 	int const CHUNK_SIZE = 1024;
-	//const int TOTAL_RECORDS;
 	FlightConfig lineStruct;
-
 };

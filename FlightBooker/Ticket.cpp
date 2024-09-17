@@ -1,11 +1,12 @@
 #pragma once
 #include <string>
 #include <unordered_map>
-#include <chrono>
 #include <unordered_set>
+#include <chrono>
 #include <vector>
 #include <format> 
 #include <utility>
+
 using namespace std;
 
 class TicketManager
@@ -71,42 +72,40 @@ public:
 			idCount--;
 			return -1;  // failure code
 		}
-		else
+		
+		for (auto& ticketType:ticketTypeMap[groupKey])
 		{
-			for (auto& ticketType:ticketTypeMap[groupKey])
-			{
-				if (ticketType->GetStartRow() <= rowNum &&
-					ticketType->GetFinishRow() >= rowNum &&
-					ticketType->GetSeatInRowAmount() >= seat)
-				{	
-					shared_ptr<Ticket> newTicket = make_shared<Ticket>(date, flightNumber, passangerName, seat, rowNum, ticketType->GetPrice(), id);
-					if (!ticketsBought.contains(*(newTicket.get()))) 
+			if (ticketType->GetStartRow() <= rowNum &&
+				ticketType->GetFinishRow() >= rowNum &&
+				ticketType->GetSeatInRowAmount() >= seat)
+			{	
+				shared_ptr<Ticket> newTicket = make_shared<Ticket>(date, flightNumber, passangerName, seat, rowNum, ticketType->GetPrice(), id);
+				if (!ticketsBought.contains(*(newTicket.get()))) 
+				{
+					ticketsBought.insert(*(newTicket.get()));
+					idToTicketMap[idCount] = newTicket;
+					
+					if (!passangerToTicketsMap.contains(passangerName))  // if not present -> create a vector
 					{
-						ticketsBought.insert(*(newTicket.get()));
-						idToTicketMap[idCount] = newTicket;
-						
-						if (!passangerToTicketsMap.contains(passangerName))  // if not present -> create a vector
-						{
-							passangerToTicketsMap[passangerName] = vector<shared_ptr<Ticket>>({ newTicket });
-						}
-						else 
-						{
-							passangerToTicketsMap[passangerName].push_back(newTicket);
-						}
-						if (!groupKeyToTicketsMap.contains(groupKey))  // if not present -> create a vector
-						{
-							groupKeyToTicketsMap[groupKey] = vector<shared_ptr<Ticket>>({ newTicket });
-						}
-						else
-						{
-							groupKeyToTicketsMap[groupKey].push_back(newTicket);
-						}
-						return id;  // return id of the ticket
+						passangerToTicketsMap[passangerName] = vector<shared_ptr<Ticket>>({ newTicket });
 					}
+					else 
+					{
+						passangerToTicketsMap[passangerName].push_back(newTicket);
+					}
+					if (!groupKeyToTicketsMap.contains(groupKey))  // if not present -> create a vector
+					{
+						groupKeyToTicketsMap[groupKey] = vector<shared_ptr<Ticket>>({ newTicket });
+					}
+					else
+					{
+						groupKeyToTicketsMap[groupKey].push_back(newTicket);
+					}
+					return id;  // return id of the ticket
 				}
 			}
-			return -1;
 		}
+		return -1;
 	}
 
 	pair<int, string> ReturnTicketWithRefund(const unsigned int id)
@@ -148,8 +147,14 @@ public:
 		{
 			return "";
 		}
-		auto& ticketsVector = groupKeyToTicketsMap[groupKey];
-		string output = "";
+		string result = "";
+
+		unordered_set<SeatPosition, SeatPosition::SeatPositionHasher> seatsOccupied;
+
+		for (auto& ticket : groupKeyToTicketsMap[groupKey])
+		{
+			seatsOccupied.insert(ticket->GetSeat());  
+		}
 
 		for (auto& ticketType : ticketTypeMap[groupKey]) 
 		{
@@ -159,14 +164,21 @@ public:
 
 			for (size_t row = startRow; row <= finishRow; row++)
 			{
-				for (size_t seat = SeatInRowEnum::A; seat <= SeatInRowEnum::L; seat++)
+				for (size_t seat = SeatInRowEnum::A; seat <= totalSeatsInRow; seat++)
 				{
-					
+					SeatPosition curSeatPos(static_cast<SeatInRowEnum>(seat), row);
+
+					if (!seatsOccupied.contains(curSeatPos))
+					{
+						result += format(" {}{}, {}$ - price |", curSeatPos.GetRowNumber(), 
+																 seatEnumMap[curSeatPos.GetSeatInRow()],
+																 ticketType->GetPrice());
+					}
 				}
 			}
 		}
-	
-
+		
+		return result;
 	}
 
 	string ViewTicketsOfPassanger(const string& passangerName)
@@ -223,13 +235,7 @@ public:
 
 private:
 	unsigned int idCount = 0;
-	string CalculateGroupKey(const chrono::year_month_day& date, const string& flightNumber)
-	{
-		return	flightNumber +
-				to_string(int(date.year())) +
-				to_string(unsigned(date.month())) +
-				to_string(unsigned(date.day()));
-	}
+	
 	unordered_map<SeatInRowEnum, char> seatEnumMap =
 	{
 		{ SeatInRowEnum::A, 'A' },
@@ -245,6 +251,15 @@ private:
 		{ SeatInRowEnum::K, 'K' },
 		{ SeatInRowEnum::L, 'L' },
 	};
+
+	string CalculateGroupKey(const chrono::year_month_day& date, const string& flightNumber)
+	{
+		return	flightNumber +
+				to_string(int(date.year())) +
+				to_string(unsigned(date.month())) +
+				to_string(unsigned(date.day()));
+	}
+	
 	class SeatPosition
 	{
 	public:
@@ -265,12 +280,12 @@ private:
 		{
 			return this->rowNumber;
 		}
-		bool operator ==(const SeatPosition& other) 
+		bool operator ==(const SeatPosition& other) const
 		{
 			return this->seatInRow == other.seatInRow &&
 				   this->rowNumber == other.rowNumber;
 		}
-		SeatPosition& operator =(const SeatPosition& other)
+		SeatPosition& operator = (const SeatPosition& other) 
 		{
 			if (this != &other)  // Check for self-assignment
 			{
@@ -279,6 +294,14 @@ private:
 			}
 			return *this;
 		}
+		struct SeatPositionHasher
+		{
+			size_t operator ()(const SeatPosition& seatPos) const
+			{
+				return (hash<size_t>()(seatPos.GetRowNumber()) ^
+						hash<int>()(seatPos.GetSeatInRow()));
+			}
+		};
 
 
 	private:

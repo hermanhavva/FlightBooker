@@ -5,6 +5,7 @@
 #include <chrono>
 #include <vector>
 #include <format> 
+#include <iostream>
 #include <utility>
 
 using namespace std;
@@ -31,21 +32,34 @@ public:
 		I = 9,
 		J = 10,
 		K = 11,
-		L = 12
+		L = 12,
+		M = 13,
+		N = 14,
+		O = 15,
+		P = 16,
+		Q = 17,
+		R = 18,
+		S = 19,
+		T = 20,
+		U = 21,
+		V = 22,
+		W = 23,
+		X = 24,
+		Y = 25,
+		Z = 26
 	};
-	
-	
-	
+
 
 	void AddTicketType(const chrono::year_month_day& date, 
 					   const string&				 flightNumber, 
 					   const SeatInRowEnum&			 seatsInRowTotal, 
-					   const size_t&				 rowsTotal, 
+					   const size_t&				 startRow,
+					   const size_t&				 finishRow,
 					   const unsigned int&			 price)
 	{
 
-		const size_t seatsTotal = seatsInRowTotal * rowsTotal;
-		unique_ptr<TicketType> newType (new TicketType(date, flightNumber, seatsTotal, rowsTotal, seatsInRowTotal, price));
+		//const size_t seatsTotal = seatsInRowTotal * rowsTotal;
+		unique_ptr<TicketType> newType (new TicketType(date, flightNumber, startRow, finishRow, seatsInRowTotal, price));
 		
 		if (!ticketTypeMap.contains(newType->GetKey()))  // if key not present
 		{
@@ -105,6 +119,7 @@ public:
 				}
 			}
 		}
+		cout << format("No such ticket(might be already booked) to match date {}, flightNum {}, seat position {}{}\n", date, flightNumber, rowNum, seatEnumMap[seat]);
 		return -1;
 	}
 
@@ -135,9 +150,7 @@ public:
 			outputPair.second = ticket->GetPasssengerName();
 				
 			return outputPair;
-		}
-		
-		
+		}		
 	}
 
 	string CheckAvailable(chrono::year_month_day date, string flightNumber)
@@ -164,15 +177,25 @@ public:
 
 			for (size_t row = startRow; row <= finishRow; row++)
 			{
+				size_t counter = 0;
 				for (size_t seat = SeatInRowEnum::A; seat <= totalSeatsInRow; seat++)
 				{
 					SeatPosition curSeatPos(static_cast<SeatInRowEnum>(seat), row);
 
 					if (!seatsOccupied.contains(curSeatPos))
 					{
-						result += format(" {}{}, {}$ - price |", curSeatPos.GetRowNumber(), 
+						counter++;
+						result += format("{}{}, {}$ - price|", curSeatPos.GetRowNumber(), 
 																 seatEnumMap[curSeatPos.GetSeatInRow()],
 																 ticketType->GetPrice());
+						if (counter%3 != 0)
+						{
+							result += '\t';
+						}
+						else 
+						{
+							result += '\n';
+						}
 					}
 				}
 			}
@@ -187,13 +210,16 @@ public:
 			return "";
 		auto& ticketsVector = passangerToTicketsMap[passangerName]; 
 		string output = "";
-		for (auto& ticket:ticketsVector)
+		size_t counter = 0;
+		for (auto& ticket : ticketsVector)
 		{
-			output += format("1. Fligth {}, {}, seat{}{}, price {}$\n", ticket->GetFlightNum(), 
-																	    ticket->GetDate(),
-																		ticket->GetSeat().GetRowNumber(),
-																		seatEnumMap[ticket->GetSeat().GetSeatInRow()],
-																		ticket->GetPrice());
+			counter++;
+			output += format("{}. Fligth {}, {}, seat{}{}, price {}$\n", counter, 
+																		 ticket->GetFlightNum(), 
+																	     ticket->GetDate(),
+																		 ticket->GetSeat().GetRowNumber(),
+																		 seatEnumMap[ticket->GetSeat().GetSeatInRow()],
+																		 ticket->GetPrice());
 		}
 		return output;
 	}
@@ -204,16 +230,16 @@ public:
 			return "";
 		string output = "";
 		auto& ticket = idToTicketMap[id];
-		output = format("Flight {}, {}, seat{}{}, price{}$, {}", ticket->GetFlightNum(),
-																 ticket->GetDate(),
-																 ticket->GetSeat().GetRowNumber(),
-																 seatEnumMap[ticket->GetSeat().GetSeatInRow()],
-																 ticket->GetPrice(),
-																 ticket->GetPasssengerName());
+		output = format("Flight {}, {}, seat {}{}, price {}$, {}\n", ticket->GetFlightNum(),
+																	   ticket->GetDate(),
+																	   ticket->GetSeat().GetRowNumber(),
+																	   seatEnumMap[ticket->GetSeat().GetSeatInRow()],
+																	   ticket->GetPrice(),
+																	   ticket->GetPasssengerName());
 		return output;
 	}	
 
-	string ViewByDateAndNumber(const string& flightNumber, const chrono::year_month_day& date)
+	string ViewByDateAndNumber(const chrono::year_month_day& date, const string& flightNumber)
 	{
 		string groupKey = CalculateGroupKey(date, flightNumber);
 
@@ -222,9 +248,12 @@ public:
 			return "";
 		}
 		string output = "";
+		size_t counter = 0;
 		for (auto& ticket : groupKeyToTicketsMap[groupKey])
 		{
-			output += format("Seat {}{}, {}, {}\n", ticket->GetSeat().GetRowNumber(),
+			counter++;
+			output += format("{} Seat {}{}, {}, {}$\n", counter,
+													ticket->GetSeat().GetRowNumber(),
 													seatEnumMap[ticket->GetSeat().GetSeatInRow()],
 													ticket->GetPasssengerName(),
 													ticket->GetPrice());

@@ -5,6 +5,7 @@
 #include <chrono>
 #include <vector>
 #include <format> 
+#include <iostream>
 #include <utility>
 
 using namespace std;
@@ -105,6 +106,7 @@ public:
 				}
 			}
 		}
+		cout << format("No such ticket type to match date {}, flightNum {}, seat position {}{}\n", date, flightNumber, rowNum, seatEnumMap[seat]);
 		return -1;
 	}
 
@@ -213,7 +215,7 @@ public:
 		return output;
 	}	
 
-	string ViewByDateAndNumber(const string& flightNumber, const chrono::year_month_day& date)
+	string ViewByDateAndNumber(const chrono::year_month_day& date, const string& flightNumber)
 	{
 		string groupKey = CalculateGroupKey(date, flightNumber);
 

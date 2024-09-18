@@ -97,7 +97,7 @@ public:
 			} 
 			cout << format("Success, \n{}\n", output);  
 			break;
-
+			 
 		case VIEW_BY_DATE_FLIGHTNUM: 
 			output = ticketManager.ViewByDateAndNumber(args->date, args->flightNumber);
 			if (output == "")
@@ -313,49 +313,16 @@ int main ()
 	Program programDriver;
 
 	wstring fileName = L"C:\\c++ projects\\FlightBooker\\FlightBooker\\config.txt";
-	
 
+	programDriver.LoadConfig(fileName);
 
+	while(true)
+	{
+		programDriver.PrintMainMenu();
+		programDriver.GetUserCommand();
+		programDriver.ExecuteCommand();
 
-	programDriver.LoadConfig(fileName); 
+	}
 
-	programDriver.PrintMainMenu();
-	programDriver.GetUserCommand();
-	programDriver.ExecuteCommand();
-
-
-	programDriver.PrintMainMenu();
-	programDriver.GetUserCommand();
-	programDriver.ExecuteCommand();
-
-	programDriver.PrintMainMenu();
-	programDriver.GetUserCommand();
-	programDriver.ExecuteCommand();
-
-
-	programDriver.PrintMainMenu();
-	programDriver.GetUserCommand();
-	programDriver.ExecuteCommand();
-
-	programDriver.PrintMainMenu();
-	programDriver.GetUserCommand();
-	programDriver.ExecuteCommand();
-
-
-	programDriver.PrintMainMenu();
-	programDriver.GetUserCommand();
-	programDriver.ExecuteCommand();
-
-	/*
-	chrono::year_month_day date{ chrono::year(2024) / chrono::month(9) / chrono::day(14) };
-	TicketManager ticketmanager;
-	ticketmanager.AddTicketType(date, "A123", TicketManager::D, 20, 30, 100);
-	ticketmanager.AddTicketType(date, "A123", TicketManager::D, 31, 40, 80);
-	ticketmanager.AddTicketType(date, "A321", TicketManager::C, 10, 20, 50);
-
-	ticketmanager.BookTicket(date,"A123", 20, TicketManager::B, "herman");
-	ticketmanager.ViewTicketsOfPassanger("herman");
-	//ticketmanager.ReturnTicketWithRefund();
-	*/ 
 	return 0;
 }

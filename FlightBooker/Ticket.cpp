@@ -252,7 +252,7 @@ public:
 		for (auto& ticket : groupKeyToTicketsMap[groupKey])
 		{
 			counter++;
-			output += format("{} Seat {}{}, {}, {}\n", counter,
+			output += format("{} Seat {}{}, {}, {}$\n", counter,
 													ticket->GetSeat().GetRowNumber(),
 													seatEnumMap[ticket->GetSeat().GetSeatInRow()],
 													ticket->GetPasssengerName(),

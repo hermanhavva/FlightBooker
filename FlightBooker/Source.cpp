@@ -71,7 +71,7 @@ public:
 			{
 				cout << e.what();
 				strategy = UNDEFINED;
-				return -1;
+				return COMMAND_FAILURE;
 			}
 			return ticketManager.BookTicket(args->date, args->flightNumber, seatPosPair.first, seatPosPair.second, args->userName);
 			
@@ -80,7 +80,7 @@ public:
 			if (priceAndNamePair.first == -1)
 			{
 				cout << format("Could not return ticket with is {}\n", args->id);
-				return -1;
+				return COMMAND_FAILURE;
 			}
 			cout << format("Success, {}$ for {}\n", priceAndNamePair.first, priceAndNamePair.second);
 			break;
@@ -90,7 +90,7 @@ public:
 			if (output == "")
 			{
 				cout << format("Could not find a ticket with id {}\n", args->id);
-				return -1;
+				return COMMAND_FAILURE;
 			}
 			cout << format("Success, {}", output);
 			break;
@@ -100,7 +100,7 @@ public:
 			if (output == "")
 			{
 				cout << format("Could not find userName {}\n", args->userName);
-				return - 1;
+				return COMMAND_FAILURE;
 			}
 			cout << format("Success, {}\n", output);
 			break;
@@ -110,15 +110,15 @@ public:
 			if (output == "")
 			{
 				cout << format("Could not find any tickets for date {}, flightNumber {}", args->date, args->flightNumber); 
-				return -1;
+				return COMMAND_FAILURE;
 			}
 			cout << format("Success, {}", output);
 			break;
 
 		case UNDEFINED:
-			return -1;
+			return COMMAND_FAILURE;
 		}
-		return 0;
+		return COMMAND_SUCCESS;
 	}
 
 private:
@@ -198,7 +198,6 @@ private:
 		token.clear();
 		return args;
 	}
-
 	int DetermineViewStrategy()
 	{
 		userInputSS >> token;
@@ -217,11 +216,10 @@ private:
 		else
 		{
 			cout << "\nProblem parsing the view args\n";
-			return -1;  // could not parse
+			return COMMAND_FAILURE;  // could not parse
 		}
-		return 0;
+		return COMMAND_SUCCESS;
 	}
-
 	pair <size_t, TicketManager::SeatInRowEnum> ParseSeatPos(const string& seatPosStr)
 	{
 		size_t rowNum = 0;
@@ -247,7 +245,10 @@ private:
 		
 		return { rowNum, seatEnum };
 	}
-	
+
+	const int COMMAND_SUCCESS = 0;
+	const int COMMAND_FAILURE = -1;
+
 	TicketManager ticketManager;
 	StrategyEnum strategy;
 };

@@ -4,65 +4,50 @@
 #include <vector>
 #include <sstream>
 #include <string>
-
 #include "Ticket.cpp"
 #include "FileParser.cpp"
-using namespace std;
-    
 
-class Program;
+using namespace std;
+
 HANDLE hout = GetStdHandle(STD_OUTPUT_HANDLE);
 
-int main ()
-{
-
-	SetConsoleTextAttribute(hout, BACKGROUND_INTENSITY | BACKGROUND_RED | BACKGROUND_GREEN);
-	system("cls");
-	TicketManager* ticketmanager = new TicketManager();
-	chrono::year_month_day date{ chrono::year(2024) / chrono::month(9) / chrono::day(14) };
-	
-	ticketmanager->AddTicketType(date, string("A100"), ticketmanager->E, 20, 100);
-
-
-	delete ticketmanager;
-	return 0;
-}
-
 class Program
-{
+{ 
 public:
 	string token = "";
 	stringstream userInputSS;
 	void PrintMainMenu()
 	{
-		string output = format("Enter your command: check <date> <flightNum>\tbook <date> <flightNum> <seatPos> <userName>\n"
-												"\t\treturn <id>\t\tview id <id>\n"
-												"\t\tview useraname <username>\tview flight <date> <flightNum>\n");
+		string output = format("----------------------------------------------------------------------------\nEnter your command: \ncheck <date> <flightNum>\tbook <date> <flightNum> <seatPos> <userName>\n"
+							   "return <id>\t\t\tview id <id>\n"
+							   "view username <username>\tview flight <date> <flightNum>\n"
+							   "----------------------------------------------------------------------------\n");
 		cout << output;
 	}
-	void GetUserCommand() 
+	void GetUserCommand()
 	{
 		string userInputSTR;
 		getline(cin, userInputSTR);
 		userInputSS = stringstream(userInputSTR);
 	}
-	
+
 	int ExecuteCommand()
 	{
-		unique_ptr <Arguments> args = move(ParseInputGetStrategy());  //  got to test this 
-		
+		shared_ptr <Arguments> args = ParseInputGetStrategy();  //  got to test this 
+
 		pair<size_t, TicketManager::SeatInRowEnum> seatPosPair;
 		pair <int, string> priceAndNamePair;
-	
+
+		int id;
 		string output;
 		switch (strategy)
 		{
 		case CHECK_BY_DATE_FLIGHTNUM:
-			ticketManager.CheckAvailable(args->date, args->flightNumber);
+			output = ticketManager.CheckAvailable(args->date, args->flightNumber);
+			cout << output << endl;
 			break;
 
 		case BOOK_BY_DATE_FLIGHTNUM_USERNAME:
-			
 			try
 			{
 				seatPosPair = ParseSeatPos(args->seatPos);
@@ -73,13 +58,21 @@ public:
 				strategy = UNDEFINED;
 				return COMMAND_FAILURE;
 			}
-			return ticketManager.BookTicket(args->date, args->flightNumber, seatPosPair.first, seatPosPair.second, args->userName);
+			id = ticketManager.BookTicket(args->date, args->flightNumber, seatPosPair.first, seatPosPair.second, args->userName);
 			
+			if (id == COMMAND_FAILURE)
+			{
+				cout << format("Could not book a flight {} for {}\n", args->flightNumber, args->userName);
+				return - 1;
+			}
+			cout << format("Success, flight {} booked for {} with ID {}\n", args->flightNumber, args->userName, id);
+			break;
+
 		case RETURN_BY_ID:
 			priceAndNamePair = ticketManager.ReturnTicketWithRefund(args->id);
 			if (priceAndNamePair.first == -1)
 			{
-				cout << format("Could not return ticket with is {}\n", args->id);
+				cout << format("Could not return ticket with ID {}\n", args->id);
 				return COMMAND_FAILURE;
 			}
 			cout << format("Success, {}$ for {}\n", priceAndNamePair.first, priceAndNamePair.second);
@@ -89,36 +82,68 @@ public:
 			output = ticketManager.ViewById(args->id);
 			if (output == "")
 			{
-				cout << format("Could not find a ticket with id {}\n", args->id);
+				cout << format("Could not find a ticket with ID {}\n", args->id);
 				return COMMAND_FAILURE;
 			}
-			cout << format("Success, {}", output);
+			cout << format("Success {}", output);
 			break;
 
 		case VIEW_BY_USERNAME:
 			output = ticketManager.ViewTicketsOfPassanger(args->userName);
 			if (output == "")
 			{
-				cout << format("Could not find userName {}\n", args->userName);
+				cout << format("Could not find userName: {}\n", args->userName);
 				return COMMAND_FAILURE;
-			}
-			cout << format("Success, {}\n", output);
+			} 
+			cout << format("Success, \n{}\n", output);  
 			break;
 
-		case VIEW_BY_DATE_FLIGHTNUM:
+		case VIEW_BY_DATE_FLIGHTNUM: 
 			output = ticketManager.ViewByDateAndNumber(args->date, args->flightNumber);
 			if (output == "")
 			{
-				cout << format("Could not find any tickets for date {}, flightNumber {}", args->date, args->flightNumber); 
+				cout << format("Could not find any tickets for date {}, flightNumber {}", args->date, args->flightNumber);
 				return COMMAND_FAILURE;
 			}
-			cout << format("Success, {}", output);
+			cout << format("Success, \n{}", output);
 			break;
 
 		case UNDEFINED:
 			return COMMAND_FAILURE;
 		}
+		
 		return COMMAND_SUCCESS;
+	}
+	 
+	int LoadConfig(wstring fileName)
+	{
+		unique_ptr<FileParser> fileParser;
+		try
+		{
+			fileParser = make_unique<FileParser>(fileName);
+		}
+		catch (const exception& e)
+		{
+			cout << format("{}\n", e.what());
+			return COMMAND_FAILURE;
+		}
+
+		auto eachFlightConfigVector = fileParser->GetFlightsConfig();
+
+		for (auto& flightConfigStruct : eachFlightConfigVector)
+		{
+			for (auto& rowToPricePair : flightConfigStruct->rowsNumsToPrice)
+			{
+				pair<size_t, size_t> seatRangePair = ExtractSeatRange(rowToPricePair.first);
+
+				ticketManager.AddTicketType(flightConfigStruct->date,
+					flightConfigStruct->flightNumber,
+					static_cast<TicketManager::SeatInRowEnum>(flightConfigStruct->seatPerRow),
+					seatRangePair.first,
+					seatRangePair.second,
+					rowToPricePair.second);
+			}
+		}
 	}
 
 private:
@@ -143,24 +168,33 @@ private:
 
 	};
 
-	unique_ptr <Arguments>& ParseInputGetStrategy()
+	shared_ptr <Arguments> ParseInputGetStrategy()
 	{
-		unique_ptr <Arguments> args = make_unique<Arguments>();
+		shared_ptr <Arguments> args = make_shared<Arguments>();
 		userInputSS >> token;
 		if (token == "check")
 		{
 			strategy = CHECK_BY_DATE_FLIGHTNUM;
-			userInputSS >> chrono::parse("%d.%m.%Y", args->date) 
-						>> args->flightNumber;
+			string date, num;
+			userInputSS >> date >> num;
+			stringstream streamDate(date); stringstream streamNum(num);
+			streamDate >> chrono::parse("%d.%m.%Y", args->date);
+			streamNum >> args->flightNumber;
 		}
 		else if (token == "book")
 		{
 			strategy = BOOK_BY_DATE_FLIGHTNUM_USERNAME;
-			userInputSS >> chrono::parse("%d.%m.%Y", args->date)
-						>> args->flightNumber
-						>> args->seatPos
-						>> args->userName;
- 
+			string date, num, seat, user;
+			userInputSS >> date
+				>> num
+				>> seat
+				>> user;
+			stringstream dateStream(date);
+			dateStream >> chrono::parse("%d.%m.%Y", args->date);
+			args->flightNumber = num;
+			args->seatPos = seat;
+			args->userName = user;  // check it
+
 		}
 		else if (token == "return")
 		{
@@ -169,7 +203,7 @@ private:
 		}
 		else if (token == "view")
 		{
-			if (DetermineViewStrategy() == -1)
+			if (DetermineViewStrategy() == COMMAND_FAILURE)
 			{
 				cout << "\nProblem parsing input\n";
 				strategy = UNDEFINED;
@@ -184,7 +218,11 @@ private:
 				userInputSS >> args->userName;
 				break;
 			case VIEW_BY_DATE_FLIGHTNUM:
-				userInputSS >> chrono::parse("%d.%m.%Y", args->date) >> args->flightNumber;
+				string s1, s2;
+				userInputSS >> s1 >> s2;
+				stringstream streamDate(s1); stringstream streamNum(s2);
+				streamDate >> chrono::parse("%d.%m.%Y", args->date);
+				streamNum >> args->flightNumber;
 				break;
 			}
 		}
@@ -201,7 +239,7 @@ private:
 	int DetermineViewStrategy()
 	{
 		userInputSS >> token;
-		if (token == "id") 
+		if (token == "id")
 		{
 			strategy = VIEW_BY_ID;
 		}
@@ -242,8 +280,19 @@ private:
 			return { rowNum, seatEnum };
 		}
 		TicketManager::SeatInRowEnum seatEnum = static_cast<TicketManager::SeatInRowEnum>(seatLetter - 'a' + 1);  // ASCII code manipulation
-		
+
 		return { rowNum, seatEnum };
+	}
+	pair<size_t, size_t> ExtractSeatRange(const string& rangeStr) {
+		size_t delimiterPos = rangeStr.find('-');
+		if (delimiterPos == std::string::npos) {
+			throw std::invalid_argument("Invalid format. Expected 'number-number'.");
+		}
+
+		size_t firstNumber = std::stoull(rangeStr.substr(0, delimiterPos));
+		size_t secondNumber = std::stoull(rangeStr.substr(delimiterPos + 1));
+
+		return make_pair(firstNumber, secondNumber);
 	}
 
 	const int COMMAND_SUCCESS = 0;
@@ -253,3 +302,60 @@ private:
 	StrategyEnum strategy;
 };
 
+
+
+
+int main ()
+{
+
+	SetConsoleTextAttribute(hout, BACKGROUND_INTENSITY | BACKGROUND_RED | BACKGROUND_GREEN);
+	system("cls");
+	Program programDriver;
+
+	wstring fileName = L"C:\\c++ projects\\FlightBooker\\FlightBooker\\config.txt";
+	
+
+
+
+	programDriver.LoadConfig(fileName); 
+
+	programDriver.PrintMainMenu();
+	programDriver.GetUserCommand();
+	programDriver.ExecuteCommand();
+
+
+	programDriver.PrintMainMenu();
+	programDriver.GetUserCommand();
+	programDriver.ExecuteCommand();
+
+	programDriver.PrintMainMenu();
+	programDriver.GetUserCommand();
+	programDriver.ExecuteCommand();
+
+
+	programDriver.PrintMainMenu();
+	programDriver.GetUserCommand();
+	programDriver.ExecuteCommand();
+
+	programDriver.PrintMainMenu();
+	programDriver.GetUserCommand();
+	programDriver.ExecuteCommand();
+
+
+	programDriver.PrintMainMenu();
+	programDriver.GetUserCommand();
+	programDriver.ExecuteCommand();
+
+	/*
+	chrono::year_month_day date{ chrono::year(2024) / chrono::month(9) / chrono::day(14) };
+	TicketManager ticketmanager;
+	ticketmanager.AddTicketType(date, "A123", TicketManager::D, 20, 30, 100);
+	ticketmanager.AddTicketType(date, "A123", TicketManager::D, 31, 40, 80);
+	ticketmanager.AddTicketType(date, "A321", TicketManager::C, 10, 20, 50);
+
+	ticketmanager.BookTicket(date,"A123", 20, TicketManager::B, "herman");
+	ticketmanager.ViewTicketsOfPassanger("herman");
+	//ticketmanager.ReturnTicketWithRefund();
+	*/ 
+	return 0;
+}

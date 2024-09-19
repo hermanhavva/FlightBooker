@@ -119,6 +119,7 @@ public:
 				}
 			}
 		}
+		idCount--;
 		cout << format("No such ticket(might be already booked) to match date {}, flightNum {}, seat position {}{}\n", date, flightNumber, rowNum, seatEnumMap[seat]);
 		return -1;
 	}
@@ -367,14 +368,7 @@ private:
 		{
 			return this->price;
 		}
-		/*size_t GetSeatTotal() const
-		{
-			return this->seatsTotal;
-		}
-		size_t GetRowTotal() const
-		{
-			return this->rowsTotal;
-		}*/
+	
 		SeatInRowEnum GetSeatInRowAmount() const
 		{
 			return this->seatsInRowTotal;
@@ -456,10 +450,10 @@ private:
 		bool operator == (const Ticket& other) const
 		{
 			return this->flightNumber == other.flightNumber &&
-				this->passangerName == other.passangerName &&
 				(*(this->seatPos)).operator == (*(other.seatPos)) &&  // syntax to prevent c2666 error
-				this->date == other.date;
+				   this->date == other.date;
 		}
+
 
 	private:
 
@@ -484,13 +478,12 @@ private:
 		size_t operator()(const Ticket& ticket) const
 		{
 
-			return ((hash<string>()(ticket.GetFlightNum()) ^
-					(hash<string>()(ticket.GetPasssengerName()) << 1)) >> 1) ^
+			return  (hash<string>()(ticket.GetFlightNum()) ^
 					(hash<int>()(int(ticket.GetDate().year())) << 1) ^
 					(hash<unsigned>()(unsigned(ticket.GetDate().month())) << 1) ^
 					(hash<unsigned>()(unsigned(ticket.GetDate().day())) << 1) ^
 					(hash<size_t>()(ticket.GetSeat().GetRowNumber()) << 1) ^
-					(hash<int>()(ticket.GetSeat().GetSeatInRow()));
+					(hash<int>()(ticket.GetSeat().GetSeatInRow())));
 		}
 	};
 	unordered_set<Ticket, TicketHasher> ticketsBought;  // CNANGE TO JUST OBJECTS(NOT POINTERS)

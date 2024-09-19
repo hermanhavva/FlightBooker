@@ -4,7 +4,7 @@
 #include <vector>
 #include <sstream>
 #include <string>
-#include "Ticket.cpp"
+#include "Ticket.cpp" 
 #include "FileParser.cpp"
 
 using namespace std;
@@ -14,8 +14,6 @@ HANDLE hout = GetStdHandle(STD_OUTPUT_HANDLE);
 class Program
 { 
 public:
-	string token = "";
-	stringstream userInputSS;
 	void PrintMainMenu()
 	{
 		string output = format("----------------------------------------------------------------------------\nEnter your command: \ncheck <date> <flightNum>\tbook <date> <flightNum> <seatPos> <userName>\n"
@@ -33,7 +31,7 @@ public:
 
 	int ExecuteCommand()
 	{
-		shared_ptr <Arguments> args = ParseInputGetStrategy();  //  got to test this 
+		shared_ptr <Arguments> args = ParseInputGetStrategy();  
 
 		pair<size_t, TicketManager::SeatInRowEnum> seatPosPair;
 		pair <int, string> priceAndNamePair;
@@ -108,6 +106,11 @@ public:
 			cout << format("Success, \n{}", output);
 			break;
 
+		case USER_EXIT:
+			cout << "\nExiting...";
+			Sleep(300);
+			break;
+
 		case UNDEFINED:
 			return COMMAND_FAILURE;
 		}
@@ -146,7 +149,6 @@ public:
 		}
 	}
 
-private:
 	enum StrategyEnum
 	{
 		CHECK_BY_DATE_FLIGHTNUM = 1,
@@ -155,9 +157,17 @@ private:
 		VIEW_BY_ID = 4,
 		VIEW_BY_USERNAME = 5,
 		VIEW_BY_DATE_FLIGHTNUM = 6,
-		UNDEFINED = 7
+		USER_EXIT = 7,
+		UNDEFINED = 8
 	};
 
+	StrategyEnum GetCurStrategy() const
+	{
+		return this->strategy;
+	}
+
+private:
+	
 	struct Arguments
 	{
 		string flightNumber;
@@ -226,6 +236,10 @@ private:
 				break;
 			}
 		}
+		else if (token == "exit")
+		{
+			strategy = USER_EXIT;
+		}
 		else
 		{
 			cout << "\nProblem parsing input\n";
@@ -245,7 +259,7 @@ private:
 		}
 		else if (token == "username")
 		{
-			strategy = VIEW_BY_USERNAME;
+			strategy = VIEW_BY_USERNAME; 
 		}
 		else if (token == "flight")
 		{
@@ -298,6 +312,9 @@ private:
 	const int COMMAND_SUCCESS = 0;
 	const int COMMAND_FAILURE = -1;
 
+	stringstream userInputSS;
+	string token = "";
+
 	TicketManager ticketManager;
 	StrategyEnum strategy;
 };
@@ -321,7 +338,10 @@ int main ()
 		programDriver.PrintMainMenu();
 		programDriver.GetUserCommand();
 		programDriver.ExecuteCommand();
-
+		if (programDriver.GetCurStrategy() == Program::USER_EXIT)
+		{
+			break;
+		}
 	}
 
 	return 0;
